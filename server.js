@@ -68,10 +68,14 @@ const rateLimit = (req, res, next) => {
   next();
 };
 
+// Jab tak admin panel se koi aur link save na ho, ye link users ko dikhega
+const DEFAULT_LINK = process.env.DEFAULT_LINK || 'https://youtu.be/Gk6KjRjvPkM?si=Y9TCLrtH5MTkhLJv';
+
 const getConfig = async () => {
   const { data, error } = await sb.from('config').select('link,title').eq('id', 1).maybeSingle();
   if (error) throw error;
-  return data || { link: '', title: '' };
+  const cfg = data || {};
+  return { link: cfg.link || DEFAULT_LINK, title: cfg.title || '' };
 };
 
 // ---------- public ----------
