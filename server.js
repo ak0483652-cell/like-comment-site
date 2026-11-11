@@ -68,6 +68,11 @@ const rateLimit = (req, res, next) => {
   next();
 };
 
+// Campaign band karne ke liye hosting par SUBMISSIONS_CLOSED=true set karein (data kuch delete nahi hota)
+const CLOSED = ['true', '1', 'yes'].includes(String(process.env.SUBMISSIONS_CLOSED || '').toLowerCase());
+const blockIfClosed = (req, res, next) =>
+  CLOSED ? res.status(403).json({ error: 'Campaign band ho gaya hai. Ab submissions nahi li ja rahi.' }) : next();
+
 // Jab tak admin panel se koi aur link save na ho, ye link users ko dikhega
 const DEFAULT_LINK = process.env.DEFAULT_LINK || 'https://youtu.be/Gk6KjRjvPkM?si=Y9TCLrtH5MTkhLJv';
 
@@ -75,7 +80,7 @@ const getConfig = async () => {
   const { data, error } = await sb.from('config').select('link,title').eq('id', 1).maybeSingle();
   if (error) throw error;
   const cfg = data || {};
-  return { link: cfg.link || DEFAULT_LINK, title: cfg.title || '' };
+  return { link: cfg.link || DEFAULT_LINK, title: cfg.title || '', closed: CLOSED };
 };
 
 // ---------- public ----------
@@ -85,6 +90,7 @@ app.get('/api/config', ah(async (req, res) => res.json(await getConfig())));
 
 app.post(
   '/api/submit',
+  blockIfClosed,
   rateLimit,
   upload.fields([{ name: 'like_screenshot', maxCount: 1 }, { name: 'comment_screenshot', maxCount: 1 }]),
   ah(async (req, res) => {
